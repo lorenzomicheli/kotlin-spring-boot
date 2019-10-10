@@ -1,0 +1,54 @@
+version: '3.7'
+
+services:
+  kotlin-spring-boot:
+    build: .
+    environment:
+      KAFKA_ENDPOINT: "kafka:9092"
+      JAVA_OPTS: -Dspring.profiles.active=prod
+    ports:
+      - "8080:8080"
+    networks:
+      - kafka
+      - db
+  db:
+    image: postgres:11
+    restart: always
+    environment:
+      POSTGRES_USER: "kotlin"
+      POSTGRES_PASSWORD: "kotlin"
+      POSTGRES_DB: "kotlinsb"
+    ports:
+      - "5432:5432"
+    networks:
+      - db
+
+  zookeeper:
+    image: wurstmeister/zookeeper
+    ports:
+      - "2181:2181"
+    networks:
+      - kafka
+
+  kafka:
+    image: wurstmeister/kafka
+    ports:
+      - "9092:9092"
+      - "9093:9093"
+    environment:
+      KAFKA_CREATE_TOPICS: "people:1:1" # topic:partition:replicas
+      KAFKA_LISTENERS: INSIDE://:9092,OUTSIDE://:9093
+      KAFKA_ADVERTISED_LISTENERS: INSIDE://kafka:9092,OUTSIDE://localhost:9093
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: INSIDE:PLAINTEXT,OUTSIDE:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: INSIDE
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    depends_on:
+      - "zookeeper"
+    networks:
+      - kafka
+
+networks:
+  kafka:
+  db:
